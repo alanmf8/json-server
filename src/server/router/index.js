@@ -49,8 +49,25 @@ module.exports = (db, opts) => {
     res.jsonp(db.getState())
   })
 
+  router.post('/:doc', function newdoc (req, res, next) {
+    const key = req.params.doc
+
+    if (!db.has(key).value()) {
+      db.set(key, []).value()
+      db.write()
+
+      const handle = plural(db, key, opts)
+      router.use(`/${key}`, handle)
+      const layer = router.stack.pop()
+      router.stack.splice(dbLayersStartIndex, 0, layer)
+    }
+    next()
+  })
+
   // Handle /:parent/:parentId/:resource
   router.use(nested(opts))
+
+  let dbLayersStartIndex = router.stack.length
 
   // Create routes
   db.forEach((value, key) => {
